@@ -1,33 +1,42 @@
-import { Fragment } from 'react';
-import Head from 'next/head';
+import { MongoClient } from "mongodb";
 
-import FeaturedPosts from '../components/home-page/featured-posts';
-import Hero from '../components/home-page/hero';
-import { getFeaturedPosts } from '../lib/posts-util';
+import Head from "next/head";
+import { Fragment } from "react-is";
+
+import MeetupList from "../components/meetups/MeetupList";
 
 function HomePage(props) {
   return (
     <Fragment>
       <Head>
-        <title>Max' Blog</title>
-        <meta
-          name='description'
-          content='I post about programming and web development.'
-        />
+        <title>React Meetups</title>
       </Head>
-      <Hero />
-      <FeaturedPosts posts={props.posts} />
+      <MeetupList meetups={props.meetups} />
     </Fragment>
   );
 }
 
-export function getStaticProps() {
-  const featuredPosts = getFeaturedPosts();
+export async function getStaticProps() {
+  const client = await MongoClient.connect(
+    "mongodb://localhost:27017/meetups?retryWrites=true&w=majority"
+  );
+  const db = client.db();
+
+  const meetupsCollection = db.collection("meetups");
+  const meetups = await meetupsCollection.find().toArray();
+
+  client.close();
 
   return {
     props: {
-      posts: featuredPosts,
+      meetups: meetups?.map((m) => ({
+        id: m._id.toString(),
+        title: m.title,
+        image: m.image,
+        address: m.address,
+      })),
     },
+    revalidate: 10,
   };
 }
 
